@@ -1,21 +1,28 @@
 <?php
     use PHPUnit\Framework\TestCase;
-    use Senna\AilosSdkPhp\AilosAPI;
-    
-    class AuthServiceTest extends TestCase
+    use Senna\AilosSdkPhp\API\AilosAPI;
+
+    class TestAPICobrancaAuth extends TestCase
     {
         private AilosAPI $ailos;
         private string $clientId = 'hf6e389N7KzjyJggo8KUBxsdqPwa';
         private string $clientSecret = 'LFcgY_jH7W3bAWX8AyrbbTCXxMAa';
+
+        private string $urlCallback = 'https://sdkailos.free.beeceptor.com/';
+        private string $ailosApiKeyDeveloper = '365c74b4-2986-0122-e063-0a291434e16f';
+
+        private string $loginCoopCode = '1';
+        private string $loginAccountCode = '92312250';
+        private string $loginPassword = 'aaaaa11111@';
 
         protected function setUp(): void
         {
             $this->ailos = new AilosAPI('https://apiendpointhml.ailos.coop.br/');
         }
 
-        private function obtainAccessToken(): array
+        private function obtainAccessToken(): void
         {
-            $response = $this->ailos->auth->accessToken($this->clientId, $this->clientSecret);
+            $response = $this->ailos->cobranca->auth->accessToken($this->clientId, $this->clientSecret, true);
             $body = $response->getBody()->getContents();
             $data = json_decode($body, true);
 
@@ -27,25 +34,21 @@
             $this->assertNotEmpty($data['access_token']);
             $this->assertEquals('Bearer', $data['token_type']);
             $this->assertGreaterThan(0, $data['expires_in']);
-
-            return $data;
         }
 
         private function obtainId(): string
         {
-            $tokenData = $this->obtainAccessToken();
+            $this->obtainAccessToken();
 
-            $this->ailos->setDefaultHeader('Authorization', "{$tokenData['token_type']} {$tokenData['access_token']}");
-
-            $response = $this->ailos->auth->id(
-                'https://sdkailos.free.beeceptor.com',
-                '365c74b4-2986-0122-e063-0a291434e16f',
+            $response = $this->ailos->cobranca->auth->id(
+                $this->urlCallback,
+                $this->ailosApiKeyDeveloper,
                 'teste'
             );
             $bodyContents = (string) $response->getBody();
 
             $this->assertEquals(200, $response->getStatusCode());
-            $this->assertNotEmpty($bodyContents, "O corpo da resposta não pode ser vazio");
+            $this->assertNotEmpty($bodyContents);
 
             return $bodyContents;
         }
@@ -62,23 +65,20 @@
 
         public function testAuth(): void
         {
-            $tokenData = $this->obtainAccessToken();
-
-            $this->ailos->setDefaultHeader('Authorization', "{$tokenData['token_type']} {$tokenData['access_token']}");
+            $this->obtainAccessToken();
 
             $id = $this->obtainId();
 
-            $authResponse = $this->ailos->auth->auth(
+            $authResponse = $this->ailos->cobranca->auth->auth(
                 $id,
-                '1',
-                '92312250',
-                'aaaaa11111@'
+                $this->loginCoopCode,
+                $this->loginAccountCode,
+                $this->loginPassword
             );
 
             $this->assertEquals(200, $authResponse->getStatusCode());
             $this->assertNotEmpty((string)$authResponse->getBody());
         }
-
     }
 
 ?>
